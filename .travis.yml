@@ -1,0 +1,167 @@
+language: python
+dist: xenial
+sudo: true
+
+addons:
+  apt:
+    update: true
+    packages:
+      # needed for compression
+      - libbz2-dev
+      - libsnappy-dev
+
+      # needed for vmprof
+      - libunwind-dev
+
+before_install:
+  # AWS tools are installed here eg
+  - export PATH=$PATH:$HOME/.local/bin
+
+  # build ID (eg, "20180513-28114a1")
+  - export BUILD_ID="$(date --utc "+%Y%m%d")-$(git rev-parse --short ${TRAVIS_COMMIT})"
+
+install:
+  - pip install setuptools wheel tox codecov
+  - pip install --force-reinstall -U "pip<19"
+
+script:
+  - tox -c tox.ini -e $TOX_ENV
+
+cache:
+  directories:
+    - $HOME/.cache/pip
+
+matrix:
+  fast_finish: true
+
+  include:
+    - python: "3.7"
+      env:
+      - TOX_ENV=flake8
+
+    #
+    # PyPy3
+    #
+    - python: "pypy3.5"
+      env:
+      - TOX_ENV=pypy3-tw154
+
+    - python: "pypy3.5"
+      env:
+      - TOX_ENV=pypy3-tw189
+
+    - python: "pypy3.5"
+      env:
+      - TOX_ENV=pypy3-twtrunk
+
+    - python: "pypy3.5"
+      env:
+      - TOX_ENV=pypy3-asyncio
+
+    #
+    # CPython 3.7
+    #
+    - python: "3.7"
+      env:
+      - TOX_ENV=py37-tw154
+
+    - python: "3.7"
+      env:
+      - TOX_ENV=py37-tw189
+
+    - python: "3.7"
+      env:
+      - TOX_ENV=py37-twtrunk
+
+    - python: "3.7"
+      env:
+      - TOX_ENV=py37-asyncio
+
+    #
+    # CPython 3.5
+    #
+    - python: "3.5"
+      env:
+      - TOX_ENV=py35-tw154
+
+    - python: "3.5"
+      env:
+      - TOX_ENV=py35-tw189
+
+    - python: "3.5"
+      env:
+      - TOX_ENV=py35-twtrunk
+
+    - python: "3.5"
+      env:
+      - TOX_ENV=py35-asyncio
+
+    #
+    # CPython 2.7
+    #
+    - python: "2.7"
+      env:
+      - TOX_ENV=py27-tw154
+
+    - python: "2.7"
+      env:
+      - TOX_ENV=py27-tw189
+
+    - python: "2.7"
+      env:
+      - TOX_ENV=py27-twtrunk
+
+    - python: "2.7"
+      env:
+      - TOX_ENV=py27-asyncio
+
+
+    - python: "3.7"
+      skip_cleanup: true
+      env: TOX_ENV=coverage
+
+    #
+    # Build wheel and upload to S3
+    # https://docs.travis-ci.com/user/build-stages/matrix-expansion/
+    #
+    - stage: deploy
+      python: "3.7"
+      if: repo = crossbario/autobahn-python AND branch = master AND type != pull_request
+      #on:
+      #  repo: crossbario/autobahn-python
+      #  branch: master
+      #  # tags: true
+      skip_cleanup: true
+      provider: script
+      script: pwd && ls -la && sh .travis-deploy.sh
+
+# CI notifications
+notifications:
+  # IRC: chat messages on #crossbar-ci @ freenode
+  irc:
+    #on_success: always  # options: [always|never|change] default: always
+    #on_failure: always  # options: [always|never|change] default: always
+    #on_start: always    # options: [always|never|change] default: always
+    channels:
+      - "irc.freenode.org#crossbar-ci"
+    use_notice: false
+    skip_join: false
+
+  # Gitter: activity feed on https://gitter.im/crossbario/ci
+  webhooks:
+    #on_success: always  # options: [always|never|change] default: always
+    #on_failure: always  # options: [always|never|change] default: always
+    #on_start: always    # options: [always|never|change] default: always
+    urls:
+      # travis encrypt --org --repo crossbario/autobahn-python "https://webhooks.gitter.im/e/7ef..."
+      - secure: Ik+ULNHCIZGJ6Mwojd6q5xuLu/M8W91EPh5ePVe0DzF8rjNC8Cn6EXz8+dKYig13nh0szpVO8TW8krlTtGHw9zR+ZtnnXEHz/sJCeJsPxH7ZniP8jCja+WX5FhY0GnG6NgZwNZlYfKYpStrpC2F9p2AtsP0fg5HyKsAlbtAytgs=
+
+  # Slack: post feed on https://crossbario.slack.com/messages/CAT527K8D
+  # https://crossbario.slack.com/services/
+  slack:
+    #on_success: always  # options: [always|never|change] default: always
+    #on_failure: always  # options: [always|never|change] default: always
+    #on_start: always    # options: [always|never|change] default: always
+    rooms:
+      # travis encrypt --org --repo crossbario/autobahn-python "crossbario:FYg..."
+      - secure: SFGFqyBRM0seIIjHeb/XY6ncdpyxMIEhrd/k3Ni/qq4CFxsCwBJIaatW05Jl6GLk5ykLMeYSSh9TtakIExZ4R068g4VhSH5be0PNjGxnvRkmoF5GmQGJcu87w7a5C4O0J+hmcH5iWBu4IWP0w3rPRiFmMGbCaH7g6qfoPqIW95Q=
